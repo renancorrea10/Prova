@@ -4,7 +4,7 @@ Candidato: Renan de Souza Correa
 O uso do comando cache ajuda a melhorar a eficiência do código nesse tipo de cenário, pois permite que resultados intermediários de operações lentas possam ser armazenados e reutilizados repetidamente.
 
 - O mesmo código implementado em Spark é normalmente mais rápido que a implementação equivalente em MapReduce. Por quê?
-Existem alguns fatores no desenho dessas ferramentas que tornam as aplicações desenvolvidas em MapReduce geralmente mais lentas que aquelas que utilizam Spark. Um desses fatores é o uso de memória. É comum a necessidade de rodar vários jobs MapReduce em sequência em vez de um único job. Ao usar MapReduce, o resultado de cada job é escrito em disco, e precisa ser lido novamente do disco quando passado ao job seguinte. Spark, por outro lado, permite que resultados intermediários sejam passados diretamente entre as operações a serem executadas através do caching desses dados em memória, ou até mesmo que diversas operações possam ser executadas sobre um mesmo conjunto de dados em cache, reduzindo a necessidade de escrita/leitura em disco. Adicionalmente, mesmo em cenários onde ocorre a execução de apenas um job, o uso de Spark tende a ter desempenho superior ao MapReduce. Isso ocorre porque jobs Spark podem ser iniciados mais rapidamente, pois para cada job MapReduce uma nova instância da JVM é iniciada, enquanto Spark mantém a JVM em constantemente em execução em cada nó, precisando apenas iniciar uma nova thread, que é um processo extremamente mais rápido.
+Existem alguns fatores no desenho dessas ferramentas que tornam as aplicações desenvolvidas em MapReduce geralmente mais lentas doque as que utilizam Spark. Um desses fatores é o uso de memória. É comum a necessidade de rodar vários jobs MapReduce em sequência em vez de um único job. Ao usar MapReduce, o resultado de cada job é escrito em disco, e precisa ser lido novamente do disco quando passado ao job seguinte. Spark, por outro lado, permite que resultados intermediários sejam passados diretamente entre as operações a serem executadas através do armazenamento em memória, ou até mesmo que diversas operações possam ser executadas sobre um mesmo conjunto de dados em cache, reduzindo a necessidade de escrita/leitura em disco. Adicionalmente, mesmo em cenários onde ocorre a execução de apenas um job, o uso de Spark tende a ter desempenho superior ao MapReduce. Isso ocorre porque jobs Spark podem ser iniciados mais rapidamente, pois para cada job MapReduce uma nova instância da JVM é iniciada, enquanto Spark mantém a JVM em constantemente em execução em cada nó, precisando apenas iniciar uma nova thread, que é um processo extremamente mais rápido.
 
 - Qual é a função do SparkContext ?
 O SparkContext funciona como um cliente do ambiente de execução Spark. Através dele, passam-se as configurações que vão ser utilizadas na alocação de recursos, como memória e processadores, pelos executors. Também usa-se o SparkContext para criar RDDs, colocar jobs em execução, criar variáveis de broadcast e acumuladores.
@@ -13,7 +13,7 @@ O SparkContext funciona como um cliente do ambiente de execução Spark. Atravé
 RDDs são a principal abstração de dados do Spark. Eles são chamados Resilient por serem tolerantes à falha, isto é, são capazes de recomputar partes de dados perdidas devido a falhas nos “nós” e são Distributed porque podem estar divididos em partições através de diferentes nós em um cluster. 
 
 - GroupByKey é menos eficiente que reduceByKey em grandes dataset.  Por quê?
-Quando fazendo uma agregação utilizando reduceByKey o “Spark” sabe que pode realizar a operação passada como parâmetro em todos os elementos de mesma chave em cada partição para obter um resultado parcial antes de passar esses dados para os executores que vão calcular o resultado final, resultando em um conjunto menor de dados sendo transferido. Por outro lado, ao usar groupByKey e aplicar a agregação em seguida, o cálculo de resultados parciais não é realizado, dessa forma um volume muito maior de dados é desnecessariamente transferido através dos executores podendo, inclusive, ser maior que a quantidade de memória disponível para o mesmo, o que cria a necessidade de escrita dos dados em disco e resulta em um grande impacto negativo na performance
+Quando fazendo uma agregação utilizando reduceByKey o “Spark” sabe que pode realizar a operação passada como parâmetro em todos os elementos de mesma chave em cada partição para obter um resultado parcial antes de passar esses dados para os executores que vão calcular o resultado final, resultando em um conjunto menor de dados sendo transferido. Por outro lado, ao usar groupByKey e aplicar a agregação em seguida, o cálculo de resultados parciais não é realizado, dessa forma um volume muito maior de dados é desnecessariamente transferido através dos executores podendo até ser maior que a quantidade de memória disponível para o mesmo, o que cria a necessidade de escrita dos dados em disco e resulta em um grande impacto negativo na performance
 
 - Explique o que o código Scala abaixo faz?
 1. val textFile = sc . textFile ( "hdfs://..." )
@@ -28,7 +28,7 @@ Quando fazendo uma agregação utilizando reduceByKey o “Spark” sabe que pod
 4= Nesta linha é feito o processo de redução por chave. O resultado final desse processo é um par de "chave: quantidade de aparições da palavra no objeto textFile".
 5= Salva o objeto criado no procedimento de mapeamento e redução como um arquivo de texto no hdfs.
 
-- QUESTÕES HTTP​ ​ requests​ ​ to​ ​ the​ ​ NASA​ ​ Kennedy​ ​ Space​ ​ Center​ ​ WWW​ ​ server: 
+- QUESTÕES HTTP requests to the NASA Kennedy Space Center WWW server: 
 1. Número de hosts únicos.
 2. O total de erros 404.
 3. Os 5 URLs que mais causaram erro 404.
@@ -36,18 +36,14 @@ Quando fazendo uma agregação utilizando reduceByKey o “Spark” sabe que pod
 5. O total de bytes retornados.
 
 1= hostsUnique = spSession.sql("SELECT COUNT (DISTINCT HOST) as COUNT_UNIQUE_HOSTS FROM dataset").collect()
-print(hostsUnique)
-
-[Row(COUNT_UNIQUE_HOSTS=137979)]
-
-print("Quantidade de Hosts únicos: {}".format(hostsUnique[0]['COUNT_UNIQUE_HOSTS']))
+print("Quantidade de Hosts únicos: {}".format(hostsUnique[0]))
 
 Quantidade de Hosts únicos: 137979
 
 2= totalErros404WithSQL = spSession.sql("SELECT COUNT(COD_HTTP) as COUNT_HTTP_ERROR FROM dataset WHERE COD_HTTP = 404").first()
-print("Total de error '404': {}".format(totalErros404WithSQL[0]))
+print("Total de erros'404': {}".format(totalErros404WithSQL[0]))
 
-Total de error '404': 20871
+Total de erros'404': 20871
 
 3= url404 = spSession.sql("SELECT HOST, COUNT(COD_HTTP) FROM dataset WHERE COD_HTTP = 404 GROUP BY HOST ORDER BY COUNT(COD_HTTP) DESC").take(10)
 print("As 5 URLs que mais causaram erro 404:\n")
@@ -69,7 +65,6 @@ As 5 URLs que mais causaram erro 404:
 
 4= dia404 = spSession.sql("SELECT DAY, COUNT(COD_HTTP) FROM dataset WHERE COD_HTTP = 404 GROUP BY DAY ORDER BY DAY ASC").collect()
 
-dia404
 [Row(DAY='01', count(COD_HTTP)=559),
  Row(DAY='02', count(COD_HTTP)=291),
  Row(DAY='03', count(COD_HTTP)=773),
